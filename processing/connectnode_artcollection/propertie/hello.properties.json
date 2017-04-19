@@ -1,0 +1,66 @@
+{
+  "/speedmat": {
+    "min": 0,
+    "max": 50,
+    "value": 14.5
+  },
+  "/speed": {
+    "min": 0,
+    "max": 10,
+    "value": 0.7999999523162842
+  },
+  "/mode2": {
+    "minY": 10,
+    "minX": 20,
+    "maxY": 360,
+    "maxX": 360,
+    "arrayValue": [
+      50.000003814697266,
+      50
+    ]
+  },
+  "/layershape": {
+    "min": 0,
+    "max": 10,
+    "value": 3.4000000953674316
+  },
+  "/myMatrix": {
+    "cells": [],
+    "interval": 214
+  },
+  "/shape2": {"value": 1},
+  "/cl2": {"arrayValue": []},
+  "/layer2": {
+    "min": 0,
+    "max": 20,
+    "value": 1.5999999046325684
+  },
+  "/cl1": {"arrayValue": []},
+  "/dropdown": {"value": 5},
+  "/layer1": {
+    "min": 0,
+    "max": 10,
+    "value": 6.5
+  },
+  "/alphashape": {
+    "min": 0,
+    "max": 250,
+    "value": 250
+  },
+  "/dropdown1": {"value": 8},
+  "/mod1": {
+    "minY": 10,
+    "minX": 20,
+    "maxY": 360,
+    "maxX": 360,
+    "arrayValue": [
+      298.5106506347656,
+      360
+    ]
+  },
+  "/sizeshape": {
+    "min": 0,
+    "max": 10,
+    "value": 2.0999999046325684
+  }
+}
