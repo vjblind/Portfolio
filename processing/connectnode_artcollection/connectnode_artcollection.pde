@@ -1,11 +1,8 @@
 import netP5.*; //<>//
 import oscP5.*;
 
-import com.corajr.loom.*;
-import com.corajr.loom.wrappers.*;
-import com.corajr.loom.util.*;
-Loom loom;
-Pattern pat,pat1, pat2, pat3, pat4;
+
+
 
 
 import com.thomasdiewald.pixelflow.java.*;
@@ -27,6 +24,13 @@ import com.thomasdiewald.pixelflow.java.softbodydynamics.particle.*;
 import com.thomasdiewald.pixelflow.java.softbodydynamics.softbody.*;
 import com.thomasdiewald.pixelflow.java.utils.*;
 
+
+
+
+ DwPixelFlow context;
+
+  DwFilter filter;
+  
 
 
 import controlP5.*;
@@ -68,20 +72,69 @@ Slider2D sl, sl1;
 Ani diameterAni;  
 
 
+
+
+//layer4//
+int steps = 15;
+float xOff, yOff;
+PVector[] points;
+PGraphics rest;
+
+float xx,yy, x , y ,phi ,t,T,i;int x1,y1,x2,y2=0;
+
+
+// The shader that will contain the blending code
+PShader myShader;
+// Let's give a name to each blend mode
+static final int BL_DARKEN        =  0;
+static final int BL_MULTIPLY      =  1;
+
+static final int BL_COLORBURN     =  2;
+static final int BL_LINEARBURN    =  3;
+static final int BL_DARKERCOLOR   =  4;
+
+static final int BL_LIGHTEN       =  5;
+static final int BL_SCREEN        =  6;
+static final int BL_COLORDODGE    =  7;
+static final int BL_LINEARDODGE   =  8;
+static final int BL_LIGHTERCOLOR  =  9;
+
+static final int BL_OVERLAY       = 10;
+static final int BL_SOFTLIGHT     = 11;
+static final int BL_HARDLIGHT     = 12;
+static final int BL_VIVIDLIGHT    = 13;
+static final int BL_LINEARLIGHT   = 14;
+static final int BL_PINLIGHT      = 15;
+static final int BL_HARDMIX       = 16;
+
+static final int BL_DIFFERENCE    = 17;
+static final int BL_EXCLUSION     = 18;
+static final int BL_SUBSTRACT     = 19;
+static final int BL_DIVIDE        = 20;
+
+static final int BL_HUE           = 21;
+static final int BL_COLOR         = 22;
+static final int BL_SATURATION    = 23;
+static final int BL_LUMINOSITY    = 24;
 //Square square[]=new Square[100];
 float px=0, py=0, s = 0, h=80;//sensor
 int grid=11;
-int gridx=11;int gridy=11;
+int gridx=11;int gridy=11;int setx=50;int sety=11;
 int startx=0,starty=0;
 int endx=0,endy=0;
 int nx = gridx;
 int ny = gridy;
 
 
+int setnx = 50;
+int setny = 11;
+float[][] setact = new float [setnx][setny];
+float rand = 0;
+
 int easing=0;
-int ii=0, layer1=0, layer2=14,layer3=0,layer4=0,layershape,title=1,Brightness=255,diagonal=0, rotani=0, hozisontalr=0,verticalr=0,speedmat=1,alphashape=255;
+int ii=0, layer1=0, layer2=14,layer3=0,layer4=0,layershape,title=1,Brightness=255,diagonal=0,rotaniz=0, rotani=0, hozisontalr=0,verticalr=0,speedmat=1,alphashape=255;
 float[] ppx=new float[100], ppy=new float[100];//sensor
-int bpm = 1;
+ 
 HColorPool    colorsx;
 float framcountc,speed=1,sizeshape=1,kick=0;
 
@@ -90,7 +143,7 @@ float[][] s0 = new float [gridx][gridy];
 float[][] s1 = new float [gridx][gridy];
 float[][] ss = new float [gridx][gridy];
 boolean[][] act = new boolean [gridx][gridy];
-boolean reverser=false,stroke1=false,fill1=true,shape2=true;
+boolean reverser=false,stroke1=false,fill1=true,shape2=true,glitch1=false;
 
 int cl1 = color(0), cl2 = color(0);
 
@@ -109,10 +162,18 @@ TColor selectedColor = null;
 
 Chart myChart;
 
+int xPos = 0;
+int yPos = 0;
 
+  
+  PGraphics2D pg_render;
+  PGraphics2D pg_luminance;
+  PGraphics2D pg_bloom;
+  
+  
 
 PFont fontawesome,pff;
-PGraphics[] Title= new  PGraphics[10];
+PGraphics[] Title= new  PGraphics[5];
   PImage imgsketch;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -123,38 +184,28 @@ PShape bot;
 PShape[] drawing=new PShape [20] ;
 
 
+PShape[] l1shape=new PShape [20] ;
 
 
-
-
+PShape cross;
 
 void settings() {
-  size(800, 600, P3D);
+  size(1280, 720, P3D);
   
 }
 void setup() {
 
-
- for (int x=0; x<10; x++) Title[x]= createGraphics(800, 600);
+  strokeCap(ROUND);
+ for (int x=0; x<5; x++) Title[x]= createGraphics(width, height);
   smooth(8);
   
   // Initialize the Loom with a tempo of 120 BPM.
- 
-  loom = new Loom(this, 125);
-  pat = new Pattern(loom);  pat.extend("0101");
-  pat1 = new Pattern(loom);  pat1.extend("01010101");
-  pat2 = new Pattern(loom);  pat2.extend("10101110101000");
-  pat3 = new Pattern(loom);  pat3.extend("10101110");
-  pat4 = new Pattern(loom);  pat4.extend("111100101");
-    pat.asColor(#FF3636,#36FF45);
-    pat1.asColor(#FF3636,#36FF45);
-    pat2.asColor(#FF3636,#36FF45);
-    pat3.asColor(#FF3636,#36FF45);
-    pat4.asColor(#FF3636,#36FF45);
-   
-     loom.setBPM(0202);
-      // This is the crucial piece: every 4 bars, shift the 12-beat pattern left by 1.
-
+   // Load the shader file from the "data" folder
+  myShader = loadShader( "shader.glsl" );
+  
+  // Pass the dimensions of the viewport to the shader
+  myShader.set( "sketchSize", float(width), float(height) );
+  
   //  pat.every(12, pat3.repeat(4));
     
      
@@ -166,18 +217,26 @@ void setup() {
   surface.setLocation(420, 10);
   noStroke();
   
+    DwPixelFlow context;
+
+  DwFilter filter;
+
   
-   // Loop the pattern (otherwise, it stops after one cycle)
- pat.loop();
- pat1.loop();
- pat2.loop();
- pat3.loop();
- pat4.loop();
- 
+  
+    pg_render = (PGraphics2D) createGraphics(width, height, P2D);
+    pg_render.smooth(8);
+    
+    pg_luminance = (PGraphics2D) createGraphics(width, height, P2D);
+    pg_luminance.smooth(8);
+    
+    pg_bloom = (PGraphics2D) createGraphics(width, height, P2D);
+    pg_bloom.smooth(8);
+
+
   // This is the crucial piece: every 4 bars, shift the 12-beat pattern left by 1.
   //pattern2.every(4, new Transforms.Shift(-1, 12));
 
-  loom.play();
+
  
 
 //  hint(DISABLE_OPTIMIZED_STROKE);
@@ -205,26 +264,14 @@ void setup() {
      
      
      
-     
+     rest = createGraphics(width, height);
+  // create an array to store the points
+  points = new PVector[steps];
+  for (int i =0; i< points.length; i++) {
+    points[i] = new PVector();
+  }  
 
-
-
-       
-  /*     
-       
-  cp5.addMatrix("my_set")
-    .setPosition(10, 340)
-    .setSize(200, 200)
-    .setGrid(nx, ny/2)
-    .setGap(10, 1)
-    .setInterval(200/speedmat)
-    .setMode(ControlP5.MULTIPLES)
-    .setColorBackground(color(120))
-    .setBackground(color(40))
-    ;
-  cp5.getController("myMatrix").getCaptionLabel().alignX(CENTER);        
-       
-     */  
+ 
      
   // CREATE A NEW SPOUT OBJECT HERE
   spout = new Spout();
@@ -282,6 +329,25 @@ void setup() {
  for(int u=0 ;u<4;u+=1)
  {
 drawing[u]  = loadShape("drawing"+u+".svg");} 
+
+
+
+ for(int u=0 ;u<3;u+=1)
+ {
+l1shape[u]  = loadShape("l1shap"+u+".svg");} 
+    
+ 
+ 
+ 
+ 
+ 
+ 
+///////////////////////////////////////////////////////////////////////////////////////////////
+//3d//
+/////////////////////////////////////////////////////////////////////////////////////////////// 
+ 
+cross = loadShape("cross.obj");
+ 
     
 }
 
@@ -292,648 +358,8 @@ drawing[u]  = loadShape("drawing"+u+".svg");}
 
 
 
-///////////////////////////////////////////////////////////////////////////////////////////////
-//ControlFrame//
-///////////////////////////////////////////////////////////////////////////////////////////////
 
-ControlFrame cf;
 
-class ControlFrame extends PApplet {
-
-  int w, h;
-  PApplet parent;
-  ControlP5 cp5;
-Range rangetimeline;
-  public ControlFrame(PApplet _parent, int _w, int _h, String _name) {
-    super();   
-    parent = _parent;
-    w=_w;
-    h=_h;
-    PApplet.runSketch(new String[]{this.getClass().getName()}, this);
-  }
-
-  public void settings() {
-    size(w, h);
-  }
-
-
-
-
-public void setup() {
-    surface.setLocation(10, 10);
-    cp5 = new ControlP5(this);
-  
-       
-    cp5.addKnob("startx")
-       .plugTo(parent, "startx")
-       .setPosition(200, 310)
-       .setSize(50, 50)
-       .setRange(0, 25)
-       .setValue(0);
-  
-      cp5.addKnob("starty")
-       .plugTo(parent, "starty")
-       .setPosition(290,310)
-       .setSize(50, 50)
-       .setRange(0, 25)
-       .setValue(0);
- 
- 
-            cp5.addKnob("endx")
-       .plugTo(parent, "endx")
-       .setPosition(200, 380)
-       .setSize(50, 50)
-       .setRange(0, 255)
-       .setValue(0);
-       
-      cp5.addKnob("endy")
-       .plugTo(parent, "endy")
-       .setPosition(290, 380)
-       .setSize(50, 50)
-       .setRange(0, 25)
-       .setValue(0);
-  
-  
-  
-    cp5.addKnob("rotani")
-       .plugTo(parent, "rotani")
-       .setPosition(150, 120)
-       .setSize(50, 50)
-       .setRange(0, 360)
-       .setValue(90);
-  
-  
-      cp5.addKnob("bpm")
-       .plugTo(parent, "bpm")
-       .setPosition(150, 400)
-       .setSize(50, 50)
-       .setRange(1, 5)
-       .setValue(1);
-  
-   rangetimeline = cp5.addRange("rangeController").plugTo(parent, "rangeController")
-             // disable broadcasting since setRange and setRangeValues will trigger an event
-             .setBroadcast(false) 
-             .setPosition(0,750)
-             .setSize(400,20)
-             .setHandleSize(20)
-             .setRange(0,255)
-             .setRangeValues(50,100)
-             // after the initialization we turn broadcast back on again
-             .setBroadcast(true)
-             .setColorForeground(color(255,40))
-             .setColorBackground(color(255,40))  
-             ;
-             
-  
-  
-  
-       
-   /* cp5.addSlider("speed")
-       .plugTo(parent, "speed")
-       .setRange(0, 0.1)
-       .setValue(0.01)
-       .setPosition(100, 240)
-       .setSize(200, 30);*/
-       
-       
-         cp5.addToggle("shape2").plugTo(parent, "shape2")
-     .setPosition(340, 200)
-     .setSize(50,20)
-     .setValue(false)
-     .setMode(ControlP5.SWITCH)
-     ;
-     
-     
-     cp5.addToggle("bw").plugTo(parent, "bw")
-     .setPosition(340, 300)
-     .setSize(50,20)
-     .setValue(false)
-     .setMode(ControlP5.SWITCH)
-     ;
-     
-       cp5.addToggle("stroke1").plugTo(parent, "stroke1")
-     .setPosition(340, 240)
-     .setSize(50,20)
-     
-         .setValue(false)
-     .setColorBackground(color(255,100))
-            .setMode(ControlP5.SWITCH)
-     ;  
-     
-     
-   cp5.addToggle("fill1").plugTo(parent, "fill1")
-     .setPosition(340,280)
-     .setSize(50,20)
- 
-      .setValue(false)
-     .setMode(ControlP5.SWITCH)
-      
-     ; 
-       
-       
-         cp5.addButton("horizontalr").plugTo(parent, "horizontalr")
-    .setValue(0)
-    .setPosition(210, 280)
-    .setSize(100, 19)
-    ;
-
-  // and add another 2 buttons
-  cp5.addButton("verticalr").plugTo(parent, "verticalr")
-    .setValue(100)
-    .setPosition(210, 260)
-    .setSize(100, 19)
-    ;
-
-  cp5.addButton("diagonal").plugTo(parent, "diagonal")
-    .setPosition(210,240)
-    .setSize(100, 19)
-    .setValue(45)
-    ;
-
-  cp5.addColorWheel("cl1", 100, 100, 100 ).plugTo(parent, "cl1")
-    .setRGB(color(0, 0, 0))  
-    .setPosition(0, 10);
-
-  cp5.addColorWheel("cl2", 100, 100, 100 ).plugTo(parent, "cl2")
-    .setRGB(color(250))  
-    .setPosition(100, 10);
-
-  cp5.addSlider("layer1").plugTo(parent, "layer1")
-    .setRange(0, 10)
-    .setValue(0)
-    .setPosition(10, 110)
-    .setSize(100, 20)
-    ;
-      cp5.addSlider("layer2").plugTo(parent, "layer2")
-    .setRange(0, 20)
-    .setValue(0)
-    .setPosition(10, 130)
-    .setSize(100, 20)
-    ;
-      cp5.addSlider("layer3").plugTo(parent, "layer3")
-    .setRange(0, 20)
-    .setValue(0)
-    .setPosition(10, 150)
-    .setSize(100, 20)
-    ;
-         cp5.addSlider("layer4").plugTo(parent, "layer4")
-    .setRange(0, 20)
-    .setValue(0)
-    .setPosition(10, 170)
-    .setSize(100, 20)
-    ;
-     cp5.addSlider("title").plugTo(parent, "title")
-    .setRange(0, 20)
-    .setValue(0)                                                                  
-    .setPosition(10, 190)
-    .setSize(100, 20)
-    ;
-    
-  cp5.addSlider("layershape").plugTo(parent, "layershape")
-    .setRange(0, 10)
-    .setValue(1)
-    .setPosition(10, 240)
-    .setSize(100, 30)
-    ;
-
-
-    
-    
-  cp5.addSlider("speed").plugTo(parent, "speed")
-    .setRange(0, 10)
-    .setValue(1)
-    .setPosition(10, 270)
-    .setSize(100, 30)
-    ; 
-
-  cp5.addSlider("speedmat").plugTo(parent, "speedmat")
-    .setRange(0, 50)
-    .setValue(1)
-    .setPosition(10, 300)
-    .setSize(100, 30)
-    ;   
-
-
-  cp5.addMatrix("myMatrix").plugTo(parent, "myMatrix")
-    .setPosition(10, 340)
-    .setSize(100, 100)
-    .setGrid(nx, ny)
-    .setGap(5, 1)
-    .setInterval(200/speedmat)
-    .setMode(ControlP5.MULTIPLES)
-    .setColorBackground(color(120))
-    .setBackground(color(40))
-    ;
-  cp5.getController("myMatrix").getCaptionLabel().alignX(CENTER);  
-cp5.get(Matrix.class, "myMatrix").setInterval(200/1+speedmat); 
-   
-  
-       
-   cp5.addBang("errase").plugTo(parent, "errase")
-    .setPosition(50, 550)
-    .setSize(40, 40)
-    ;
-
-  cp5.addBang("bang").plugTo(parent, "bang")
-    .setPosition(10, 550)
-    .setSize(40, 40)
-    ;
- cp5.addBang("reverse").plugTo(parent, "reverse")
-    .setPosition(90, 550)
-    .setSize(40, 40)
-    ;
-
-      
-     
-     /*
-     
-   cp5.addSlider("Brightness").plugTo(parent, "Brightness")
-    .setRange(0, 255)
-    .setValue(255)
-    .setPosition(10, 460)
-    .setSize(100, 20)
-    ;   */
-     
-     
- cp5.addSlider("alphashape").plugTo(parent, "alphashape")
-    .setRange(0, 255)
-    .setValue(255)
-    .setPosition(10, 490)
-    .setSize(100, 20)
-    ;
-  cp5.addSlider("sizeshape").plugTo(parent, "sizeshape")
-    .setRange(0, 10)
-    .setValue(1)
-    .setPosition(10, 510)
-    .setSize(100, 30)
-    ;   
-           
-           
-           
-           
- 
-
-  sl = cp5.addSlider2D("mod1").plugTo(parent, "mod1")
-    .setPosition(200, 10)
-    .setSize(100, 100)
-    .setMinMax(20, 10, 360, 360)
-    .setValue(140, 222)
-    //.disableCrosshair()
-    ;      
-  sl1 = cp5.addSlider2D("mode2").plugTo(parent, "mode2")
-    .setPosition(300, 10)
-    .setSize(100, 100)
-    .setMinMax(20, 10, 360, 360)
-    .setValue(50, 50)
-    //.disableCrosshair()
-    ;          
-           
-           
-           
-              
-           
-   myChart = cp5.addChart("dataflow").plugTo(parent, "dataflow")
-               .setPosition(200, 120)
-               .setSize(200, 50)
-               .setRange(-20, 20)
-               .setView(Chart.LINE) // use Chart.LINE, Chart.PIE, Chart.AREA, Chart.BAR_CENTERED
-               .setStrokeWeight(1.5)
-               .setColorCaptionLabel(color(40))
-               ;
-
-  myChart.addDataSet("incoming");
-  myChart.setData("incoming", new float[100]);          
-           
-           
-      List l = Arrays.asList("BRIGHT", "COOL", "DARK", "FRESH", "HARD", "INTENSE", "LIGHT", "NEUTRAL", "SOFT", "WARM", "WEAK");     
-
-  cp5.addScrollableList("dropdown").plugTo(parent, "dropdown")
-    .setPosition(10, 670)
-    .setSize(200, 100)
-    .setBarHeight(20)
-    .setItemHeight(20)
-    .addItems(l)
-    .close()  
-    // .setType(ScrollableList.LIST) // currently supported DROPDOWN and LIST
-    ;
-
-  List l1 = Arrays.asList("ANALOGOUS", "COMPLEMENTARY", "COMPOUND", "LEFT_SPLIT_COMPLEMENTARY", "MONOCHROME", "RIGHT_SPLIT_COMPLEMENTARY"
-    , "SINGLE_COMPLEMENT", "SPLIT_COMPLEMENTARY", "TETRAD", "TRIAD");     
-
-  cp5.addScrollableList("dropdown1").plugTo(parent, "dropdown1")
-    .setPosition(10, 650)
-    .setSize(200, 100)
-    .setBarHeight(20)
-    .setItemHeight(20)
-    .addItems(l1)
-    .close()  
-    // .setType(ScrollableList.LIST) // currently supported DROPDOWN and LIST
-    ;
-
-       
-       
-       
-                cp5.addIcon("savex",10)
-     .setPosition(20,600)
-     .setSize(70,50)
-     .setRoundedCorners(20)
-     .setFont(pff)
-     .setFontIcons(#00f205,#00f204)
-     //.setScale(0.9,1)
-     .setSwitch(true)
-     .setColorBackground(color(255,100))
-     .hideBackground()
-     ;  
-     
-     
-     cp5.addIcon("loadx",10)
-     .setPosition(50,600)
-     .setSize(70,50)
-     .setRoundedCorners(20)
-     .setFont(pff)
-     .setFontIcons(#00f205,#00f204)
-     //.setScale(0.9,1)
-     .setSwitch(true)
-     .setColorBackground(color(255,100))
-     .hideBackground()
-     ;  
-     
-       
-     cp5.addTextfield("input")
-     .setPosition(200,500)
-     .setSize(150,20)
-          .setFocus(true)
-     .setColor(color(255,0,0))
-     ;    
-       
- 
-       
-       
-     // println(strategycolor +" "+range);
-    
-  /* here an item is stored as a Map  with the following key-value pairs:
-   * name, the given name of the item
-   * text, the given text of the item by default the same as name
-   * value, the given value of the item, can be changed by using .getItem(n).put("value", "abc"); a value here is of type Object therefore can be anything
-   * color, the given color of the item, how to change, see below
-   * view, a customizable view, is of type CDrawable 
-   */
-strategy = ColorTheoryRegistry.getStrategyForName(strategycolor);
-  colocrs = ColorList.createUsingStrategy(strategy, cocl);
-
-  TColor col =ColorRange.getPresetForName(range ).getColor();
-
-
-  ColorList colList = ColorList.createUsingStrategy(strategy, col);
-
-
-  for (Iterator i = colList.iterator(); i.hasNext(); ) {
-    c = (TColor) i.next();
-    colocrs.add(c);
-    selectedColor = c;
-  }
-      
-
-    
-       
-  }
-
-  void draw() {
-    background(50);
-//pat.speed(bpm%3);
- 
-pat2.extend("00000");
-fill(pat.asColor());
-rect(0,700,100,50);
-fill(pat1.asColor());
-rect(100,700,100,50);
-fill(pat2.asColor());
-rect(200,700,100,50);
-fill(pat3.asColor());
-rect(300,700,100,50);
-fill(pat4.asColor());
-rect(400,700,100,50);
-  }
-  
-  
-  
-  
-///////////////////////////////////////////////////////////////////////////////////////////////
-//icon//
-///////////////////////////////////////////////////////////////////////////////////////////////
-void savex(boolean theValue) {
-  cp5.saveProperties(("hello.properties"));
- 
-} 
-void loadx(boolean theValue) {
- cp5.loadProperties(("hello.properties"));
-} 
-
-void  diagonal(){
- 
-rotani=60;
-
-}
-
-
-void  verticalr(){
- rotani=360;
-
-
-}
-void  horizontalr(){
- 
-rotani=90;
-
-}
-
-
-
-void  bpm(){
- 
-
-
-}
-     ///////////////////////////////////////////////////////////////////////////////////////////////
-//dropdown//
-///////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
- 
-void vertical() {
-
-
-
-
-
-
-}
-
-
-
-void dropdown(int n) {
-  /* request the selected item based on index n */
-  range=""+ cp5.get(ScrollableList.class, "dropdown").getItem(n).get("name").toString();
- // println( cp5.get(ScrollableList.class, "dropdown").getItem(n).get("name").toString());
-  strategy =ColorTheoryRegistry.getStrategyForName(strategycolor);
-  colocrs =  colocrs =  ColorList.createUsingStrategy(strategy, col);
-
- col =ColorRange.getPresetForName(range ).getColor();
-  ColorList colList = ColorList.createUsingStrategy(strategy, col);
-
-
-  for (Iterator i = colList.iterator(); i.hasNext(); ) {
-    c = (TColor) i.next();
-  //  colocrs.add(c);
-    selectedColor = c;
-  }
-  
-  //  bot = loadShape("bot1.svg");
-}
-
-
-void dropdown1(int n) {
-  
-  
-  /* request the selected item based on index n */
-  strategycolor=""+ cp5.get(ScrollableList.class, "dropdown1").getItem(n).get("name").toString();
-//  if(strategycolor==null){strategycolor="error";            }
-//  println(strategycolor +" "+range);
-
-
-   strategy =ColorTheoryRegistry.getStrategyForName(strategycolor);
-  colocrs =  colocrs =  ColorList.createUsingStrategy(strategy, col);
-
- col =ColorRange.getPresetForName(range ).getColor();
-  ColorList colList = ColorList.createUsingStrategy(strategy, col);
-
-
-  for (Iterator i = colList.iterator(); i.hasNext(); ) {
-    c = (TColor) i.next();
-    colocrs.add(c);
-    selectedColor = c;
-  }
-}
-
-  
-  ///////////////////////////////////////////////////////////////////////////////////////////////
-//errase//
-///////////////////////////////////////////////////////////////////////////////////////////////
-
-public void errase() {
-  /*int theColor = (int)random(255);
-  //println(strategycolor+"ee");
-
-  for (int x=0; x<10; x++)
-    for (int y=0; y<10; y++) {
-      s0[x][y]=10;
-      s1[x][y]=10;
-      ss[x][y]=10;
-      act[x][y]=false;
-    } */
-    
-
-  cp5.get(Matrix.class,"myMatrix").clear();
-      
- 
- 
-    
-  }
-  
-int ii=0, layer1=0, layer2=14,layer3=0,layer4=0,layershape,title=1,Brightness=255,diagonal=0, rotani=0, hozisontalr=0,verticalr=0,speedmat=1,alphashape=255;
-
- s=1;
-}
-  
-  
-}
-
- 
-
-
-
-
-
-
-
-
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////
-//icon//
-///////////////////////////////////////////////////////////////////////////////////////////////
-void fill1(boolean theValue) {
-  println("got an event for icon", theValue);
-  fill1=!fill1;
-} 
-void stroke1(boolean theValue) {
-  println("got an event for icon", theValue);
-  stroke1=!stroke1; 
-} 
-
-///////////////////////////////////////////////////////////////////////////////////////////////
-//matrix//
-///////////////////////////////////////////////////////////////////////////////////////////////
-void myMatrix(int theX, int theY) {
-
-
-
- 
- if(reverser) {  act[9-theX][theY]= true;  
-  s0[9-theX][theY]=5-s1[9-theX][theY] ;
-  Ani.to(this, 1, "h", random(0, 50), Ani.BOUNCE_IN);
- }
- if(!reverser) {  act[theX][theY]= true; 
- 
- s0[theX][theY]=5-s1[theX][theY] ;
-  Ani.to(this, 1, "h", random(0, 50), Ani.BOUNCE_IN);  }
-
- 
-
-  
-  
-}
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////
-//reverse//
-///////////////////////////////////////////////////////////////////////////////////////////////
-
-public void reverse() {
-  
-  
-  
-  
-  
- reverser=!reverser;
-  //println(reverser);
- 
-}
-
-
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////
-//bang//
-///////////////////////////////////////////////////////////////////////////////////////////////
-
-public void bang() {
- // int theColor = (int)random(10);
-  ColorTheoryStrategy strategy =ColorTheoryRegistry.getStrategyForName(strategycolor);
-  colocrs =  colocrs =  ColorList.createUsingStrategy(strategy, col);
-
-  TColor col =ColorRange.getPresetForName(range ).getColor();
-  ColorList colList = ColorList.createUsingStrategy(strategy, col);
-
-
-  for (Iterator i = colList.iterator(); i.hasNext(); ) {
-    c = (TColor) i.next();
-    colocrs.add(c);
-    selectedColor = c;
-  }
-  
-}
 
 
 
@@ -945,7 +371,8 @@ public void bang() {
 void draw() {
   
 
-  
+ // pg_render.beginDraw();
+    ///{
   
  
  
@@ -997,23 +424,353 @@ void draw() {
     
     break;
     
-      case 1:
+    
+    
+      case 1 :
+fill(cl2,alphashape);
+rect(width*0.5,abs(framcountc*10)%height,width,100+bpm) ;
+    break;  
+    case 2 :
+fill(cl2,alphashape);
+rect(width*0.5,height-(framcountc*10)%height,width,100+bpm) ;
+    break;   
+case 3 :
+fill(cl2,alphashape);
+rect((framcountc*10)%width  ,height*0.5,100,height) ;
 
-    for (int x=startx; x<gridx-endx; x++)
-      for (int y=starty; y<gridy-endy; y++) {
-       // s1[x][y] += ( s0[x][y]-s1[x][y])*0.1;
-        float s=s1[x][y];
-          selectedColor = colocrs.get((x*y)%colocrs.size());
-     //   fill(selecBrightnesstedColor.toARGB(),alphashape); 
-      fill(selectedColor.toARGB(),alphashape); 
-         selectedColor = colocrs.get(x%colocrs.size());
-           stroke(selectedColor.toARGB(),alphashape); 
-     
-        if ( !act[x][y])Obshap(layershape, x*80,y*80, s   ,s);
+    break;  
+    case 4 :
+fill(cl2,alphashape);
+rect(width-(framcountc*10)%width  ,height*0.5,100,height) ;
+
+    break;   
+       
+   case 5 :
+fill(cl2,alphashape);
+ellipse(width*0.5,height*
+0.5,height-(framcountc*10)%height,height-(framcountc*10)%height) ;
+    break;  
+ 
+    
+    
+       case 6 :
+fill(cl2,alphashape);
+ellipse(width*0.5,height*
+0.5,(framcountc*10)%height,(framcountc*10)%height) ;
+    break;  
+ 
+
+   
+      case 7 :
+fill(cl2,alphashape);
+ellipse(width*0.5,height*
+0.5,height-(framcountc*10)%height,height-(framcountc*10)%height) ;
+
+fill(0);
+ellipse(width*0.5,height*
+0.5,+bpm+(height-(framcountc*10)%height)*0.5,+bpm+(height-(framcountc*10)%height)*0.5) ;
+    break;  
+ 
+    
+    
+       case 8 :
+fill(cl2,alphashape);
+ellipse(width*0.5,height*
+0.5,(framcountc*10)%height,(framcountc*10)%height) ;
+
+
+fill(0);
+ellipse(width*0.5,height*
+0.5,+bpm+(framcountc*10)%height*0.5,+bpm+(framcountc*10)%height*0.5);
+    break;  
+   
+   
+   
+      case 9 :
+fill(cl2,alphashape);
+rect(width*0.5,height*
+0.5,height-(framcountc*10)%height,height-(framcountc*10)%height) ;
+
+fill(0);
+rect(width*0.5,height*
+0.5,+bpm+(height-(framcountc*10)%height)*0.5,+bpm+(height-(framcountc*10)%height)*0.5) ;
+    break;  
+ 
+    
+    
+       case 10 :
+fill(cl2,alphashape);
+rect(width*0.5,height*
+0.5,(framcountc*10)%height,(framcountc*10)%height) ;
+
+
+fill(0);
+rect(width*0.5,height*
+0.5,+bpm+(framcountc*10)%height*0.5,+bpm+(framcountc*10)%height*0.5);
+    break;    
+   
+   
+       case 11 :
+fill(cl2,alphashape);
+ellipse(width*0.5,height*
+0.5,height-(framcountc*10)%height,height-(framcountc*10)%height) ;
+
+fill(0);
+rect(width*0.5,height*
+0.5,+bpm+(height-(framcountc*10)%height)*0.5,+bpm+(height-(framcountc*10)%height)*0.5) ;
+    break;  
+ 
+    
+    
+       case 12 :
+fill(cl2,alphashape);
+ellipse(width*0.5,height*
+0.5,(framcountc*10)%height,(framcountc*10)%height) ;
+
+
+fill(0);
+rect(width*0.5,height*
+0.5,+bpm+(framcountc*10)%height*0.5,+bpm+(framcountc*10)%height*0.5);
+    break;     
+   
+   
+   
+   
+   
+   
+        case 13 :
+        
+fill(cl2,alphashape);
+ellipse(width*0.5,height*
+0.5,(framcountc*10)%height,(framcountc*10)%height) ;
+
+pushMatrix();
+fill(0);
+     translate((width*0.5),(height*0.5)); 
+   rotate(radians(rotani));
+  translate(-(width*0.5),-(height*0.5)); 
+    translate((width*0.5),(height*0.5)); 
+   
+rect( 0,0,+bpm+(framcountc*10)%height*0.5,+bpm+(framcountc*10)%height*0.5);
+popMatrix();
+    
+    break;    
+    
+    
+    
+    
+           case 14 :
+           
+           
+fill(cl2,alphashape);
+pushMatrix();
+    translate((width*0.5),(height*0.5)); 
+   rotate(radians(rotani));
+  translate(-(width*0.5),-(height*0.5)); 
+    translate((width*0.5),(height*0.5)); 
+   
+rect( 0,0,+bpm+(framcountc*10)%height ,+bpm+(framcountc*10)%height );
+
+
+fill(0);
+rect(0,0,+bpm+(framcountc*10)%height*0.5,+bpm+(framcountc*10)%height*0.5);
+
+popMatrix();
+    
+    break;  
+
+  
+          case 15 :
+           
+           
+fill(cl2,alphashape);
+pushMatrix();
+    translate((width*0.5),(height*0.5)); 
+   rotate(radians(rotani));
+  translate(-(width*0.5),-(height*0.5)); 
+    translate((width*0.5),(height*0.5)); 
+
+
+       
+        float radius15 = +bpm+(framcountc*10)%height ;
+        float angle15 = TWO_PI /3;
+
+    beginShape();
+        for (float a = PI/8; a < TWO_PI; a += angle15) {
+          float vx = 0 + cos(a) * radius15;
+          float vy = 0 + sin(a) * radius15;
+          vertex(vx, vy);
+        }
+        endShape(CLOSE);
+fill(0);
+          radius15 = +bpm+(framcountc*10)%height*0.5;
+   beginShape();
+        for (float a = PI/8; a < TWO_PI; a += angle15) {
+          float vx = 0 + cos(a) * radius15;
+          float vy = 0 + sin(a) * radius15;
+          vertex(vx, vy);
+        }
+        endShape(CLOSE);
+popMatrix();
+    
+    break;  
+   
+
+   
+     case 16 :
+           
+           
+fill(cl2,alphashape);
+pushMatrix();
+    translate((width*0.5),(height*0.5)); 
+   rotate(radians(rotani));
+  translate(-(width*0.5),-(height*0.5)); 
+    translate((width*0.5),(height*0.5)); 
+
+
+       println(rotani);
+          radius15 = +bpm+(framcountc*10)%height ;
+          angle15 = TWO_PI /3;
+
+    beginShape();
+        for (float a = PI/3; a < TWO_PI; a += angle15) {
+          float vx = 0 + cos(a) * radius15;
+          float vy = 0 + sin(a) * radius15;
+          vertex(vx, vy);
+        }
+        endShape(CLOSE);
+fill(0);
+          radius15 = +bpm+(framcountc*10)%height*0.5;
+   beginShape();
+        for (float a = PI/3; a < TWO_PI; a += angle15) {
+          float vx = 0 + cos(a) * radius15;
+          float vy = 0 + sin(a) * radius15;
+          vertex(vx, vy);
+        }
+        endShape(CLOSE);
+popMatrix();
+    
+    break;  
+   
+   
+   
+   
+case 17 :
+           
+           
+fill(cl2,alphashape);
+pushMatrix();
+    translate((width*0.5),(height*0.5)); 
+   rotate(radians(rotani));
+  translate(-(width*0.5),-(height*0.5)); 
+    translate((width*0.5),(height*0.5)); 
+
+
+       println(rotani);
+          radius15 = +bpm+(framcountc*10)%height ;
+          angle15 = TWO_PI /8;
+
+    beginShape();
+        for (float a = PI/8; a < TWO_PI; a += angle15) {
+          float vx = 0 + cos(a) * radius15;
+          float vy = 0 + sin(a) * radius15;
+          vertex(vx, vy);
+        }
+        endShape(CLOSE);
+fill(0);
+          radius15 = +bpm+(framcountc*10)%height*0.5;
+   beginShape();
+        for (float a = PI/8; a < TWO_PI; a += angle15) {
+          float vx = 0 + cos(a) * radius15;
+          float vy = 0 + sin(a) * radius15;
+          vertex(vx, vy);
+        }
+        endShape(CLOSE);
+popMatrix();
+    
+    break;  
+      
+  
+   
+    case 19 :
+        
+fill(cl2,alphashape);
+ 
+
+ 
+ shapeMode(CENTER);
+ pushMatrix();
+ translate((width*0.5),(height*0.5)); 
+   rotate(radians(rotani));
+  translate(-(width*0.5),-(height*0.5)); 
+    translate((width*0.5),(height*0.5)); 
+      shape(l1shape[2],0,0,+bpm+(framcountc*10)%height*0.5,+bpm+(framcountc*10)%height*0.5  );   
+     l1shape[2].disableStyle();  // Ignore the colors in the SVG
+popMatrix();
+  
+  
+    
+    break;       
+   
+ 
+    
+    
+    case 20 :
+fill(cl2,alphashape);
+rect((framcountc*10)%width,(height*0.5)+100*sin(framcountc*0.1)*0.5,100+bpm,100+bpm) ;
+    break;   
+    
+    
+    case 21 :
+fill(cl2,alphashape);
+rect(width-(framcountc*10)%width,(height*0.5)+100*sin(framcountc*0.1)*0.5,100+bpm,100+bpm) ;
+    break;   
+        
+  case 22 :
+fill(cl2,alphashape);
+rect(width-(framcountc*10)%width,(height*0.5)+100*sin(framcountc*0.1)*0.5,100+bpm,100+bpm) ;
+rect( (framcountc*10)%width,(height*0.5)+100*sin(framcountc*0.1)*0.5,100+bpm,100+bpm) ;
+    break;
+    
+ ///////////////////////////////////////////////////////////////////////////////////////////////
+ //3d
+ //////////////////////////////////////////////////////////////////////////////////////////////////
+  case 23:hint(DISABLE_DEPTH_TEST);
+  pushMatrix();
+ translate((width*0.5),(height*0.5)); 
+   rotate(radians(rotani));rotateY(radians(rotani));
+  translate(-(width*0.5),-(height*0.5)); 
+    translate((width*0.5),(height*0.5));
+    
+    
+     shape(cross, -100, 0,+bpm+(framcountc*10)%height*0.5,+bpm+(framcountc*10)%height*0.5);
+     l1shape[2].disableStyle();  // Ignore the colors in the SVG
+popMatrix();
+  
+   
+ 
+    break;    
+    
+      case 30:
+    framcountc=1;
+    for (int x=0; x<gridx; x++)
+      for (int y=0; y<gridy; y++) { 
+        selectedColor = colocrs.get((x*y)%colocrs.size());
+        fill(selectedColor.toARGB(),alphashape); 
+       
+stroke(selectedColor.toARGB(),alphashape); 
+        selectedColor = colocrs.get(x%colocrs.size());
+        //     s1=((4+x)*constrain (framcountc*0.7%50, 0, 80) );
+        s1[x][y] += ( s0[x][y]-s1[x][y])*0.1*speed;
+        //s1[x][y]  =h;
+        s=s1[x][y];
+        if ( act[x][y])ss[x][y]=(h+s)*0.3; 
+
+     Obshap(layershape,40+x*80, 40+y*80, ss[x][y], ss[x][y]  );
       }
     break;
 
-    case 2:
+    case 31:
 
     for (int x=0; x<gridx; x++)
       for (int y=0; y<gridy; y++) {
@@ -1036,7 +793,7 @@ void draw() {
       }
     break;
 
-  case 3:
+  case 32:
 
     for (int x=0; x<gridx; x++)
       for (int y=0; y<gridy; y++) {
@@ -1056,7 +813,7 @@ void draw() {
     break;
 
 
-  case 4:
+  case 33:
     framcountc=1;
     for (int x=0; x<gridx; x++)
       for (int y=0; y<gridy; y++) { 
@@ -1081,7 +838,7 @@ stroke(selectedColor.toARGB(),alphashape);
     break;  
 
 
-  case 5:
+  case 34:
     framcountc=1;
     for (int x=0; x<gridx; x++)
       for (int y=0; y<gridy; y++) {
@@ -1113,7 +870,7 @@ stroke(selectedColor.toARGB(),alphashape);
 
 
 
-  case 6:
+  case 35:
   
    
    for (int x=0; x<gridx; x++)
@@ -1187,7 +944,7 @@ stroke(selectedColor.toARGB(),alphashape);
 
     
     
-   case 11:
+   case 113:
 
     for (int x=startx; x<gridx; x++)
       for (int y=0; y<gridy; y++) {
@@ -1272,7 +1029,7 @@ stroke(selectedColor.toARGB(),alphashape);
     fill(0);
 
     break;
-  case 7: 
+  case 700: 
   
   
   
@@ -1310,13 +1067,13 @@ stroke(selectedColor.toARGB(),alphashape);
   
     
     break;
-  case 8: 
+  case 8000: 
     ;
     break;
-  case 9: 
+  case 900: 
     ;
     break;
-  case 10: 
+  case 1000: 
     ;
     break;
   }
@@ -1420,14 +1177,35 @@ stroke(selectedColor.toARGB(),alphashape);
   }
   //fill(20+py, 240, 100);
 
-
-
-
+//    }
+ // pg_render.endDraw();
+/*if(true){
+      // luminance pass
+      filter.luminance_threshold.param.threshold = 0.0f; // when 0, all colors are used
+      filter.luminance_threshold.param.exponent  = 5;
+      filter.luminance_threshold.apply(pg_render, pg_luminance);
+      
+      // bloom pass
+      // if the original image is used as source, the previous luminance pass 
+      // can just be skipped
+//      filter.bloom.setBlurLayers(10);
+      filter.bloom.param.mult   = map(mouseX, 0, width, 0, 10);
+      filter.bloom.param.radius = map(mouseY, 0, height, 0, 1);
+      filter.bloom.apply(pg_luminance, pg_bloom, pg_render);
+    }
+    
+    filter.copy.apply(pg_bloom, pg_render); 
+    
+      // display result
+    blendMode(ADD );
+    background(0);
+  //  image(pg_render, 0, 0);
+    */
 
   /////////////////layer3//////////////////////////////////////////////
 
 fill(layer3);
-  switch(1) {
+  switch(layer3) {
 
     
       case 0:
@@ -1478,19 +1256,92 @@ fill(layer3);
 
     ;
     break;
-  case 66: 
+  case 6: fill(0);
+
+  for  (int i = 1; i < 300; i++) {
+    ellipse( (width/300) * i, (height/2) + random(-rand, rand),10+bpm,10+bpm );
+ 
+ if(second()%6>3) rand += random(-15, 15);else rand=0;
+    
+  }
+
     ;
     break;
-  case 6: 
-    ;
-    break;
-  case 7: 
+    
+    
+    
+
+    
+    
+  case 7:
+  
+
+     pushMatrix();
+  translate( (width*0.5), (height*0.5)); 
+  fill(cl2,alphashape);
+  xx=350;
+yy=100;
+x1=100;x2=500;y1=0;y2=0;
+  int dx = x2 - x1;
+int dy = y2 - y1;
+for (float x = x1;x< x2;x+=2) {
+ y = y1 + dy * (x - x1) / dx;
+// point(x, y);
+//point(200*cos(2*PI*radians( x)%30)*sin(TWO_PI * x / 4000+pow(i,10)+i*10),y+200*sin(2*PI*radians( x)%10)*sin(TWO_PI * x / 4000+i+i*10));
+//point(100*cos(2*PI*radians( x)%30),y+100*sin(2*PI*radians( x)%10));
+//point(200*cos(2*PI*radians( x)*7)*sin(TWO_PI * x / 4000+i),y+200*sin(2*PI*radians( x)*7)*sin(TWO_PI * x / 4000+i));
+  ellipse(300*cos(2*PI*radians( x))*sin(TWO_PI * x / 40+framcountc*0.01),y+300*sin(2*PI*radians( x))*sin(TWO_PI * x / 400+framcountc*0.01),10,10);
+}
+  
+     popMatrix(); 
     ;
     break;
   case 8: 
+   
+    
+    
+     pushMatrix();
+  translate( (width*0.5), (height*0.5)); 
+  fill(cl2,alphashape);
+  xx=350;
+yy=100;
+x1=100;x2=500;y1=0;y2=0;
+    dx = x2 - x1;
+  dy = y2 - y1;
+for (float x = x1;x< x2;x+=2) {
+ y = y1 + dy * (x - x1) / dx;
+// point(x, y);
+//point(200*cos(2*PI*radians( x)%30)*sin(TWO_PI * x / 4000+pow(i,10)+i*10),y+200*sin(2*PI*radians( x)%10)*sin(TWO_PI * x / 4000+i+i*10));
+//point(100*cos(2*PI*radians( x)%30),y+100*sin(2*PI*radians( x)%10));
+ellipse(200*cos(2*PI*radians( x)*7)*sin(TWO_PI * x / 4000+framcountc*0.005),y+200*sin(2*PI*radians( x)*7)*sin(TWO_PI * x / 4000+framcountc*0.005),10,10);
+//  ellipse(300*cos(2*PI*radians( x))*sin(TWO_PI * x / 40+framcountc*0.02),y+300*sin(2*PI*radians( x))*sin(TWO_PI * x / 400+framcountc*0.05),10,10);
+}
+  
+     popMatrix(); 
     ;
     break;
   case 9: 
+  
+       pushMatrix();
+  translate( (width*0.5), (height*0.5)); 
+  fill(cl2,alphashape);
+  xx=350;
+yy=100;
+x1=100;x2=500;y1=0;y2=0;
+    dx = x2 - x1;
+  dy = y2 - y1;
+for (float x = x1;x< x2;x+=2) {
+ y = y1 + dy * (x - x1) / dx;
+// point(x, y);
+//point(200*cos(2*PI*radians( x)%30)*sin(TWO_PI * x / 4000+pow(i,10)+i*10),y+200*sin(2*PI*radians( x)%10)*sin(TWO_PI * x / 4000+i+i*10));
+ ellipse(10+bpm*0.+400*cos(2*PI*radians( x+framcountc*0.05)%30),y+400*sin(2*PI*radians( x+framcountc*0.05)%10),10+sizeshape,10+sizeshape);
+ellipse(200*cos(2*PI*radians( x)*7)*sin(TWO_PI * x / 4000+framcountc*0.005),y+200*sin(2*PI*radians( x)*7)*sin(TWO_PI * x / 4000+framcountc*0.005),10,10);
+//  ellipse(300*cos(2*PI*radians( x))*sin(TWO_PI * x / 40+framcountc*0.02),y+300*sin(2*PI*radians( x))*sin(TWO_PI * x / 400+framcountc*0.05),10,10);
+}
+  
+     popMatrix(); 
+    ;
+  
     ;
     break;
   case 10: 
@@ -1516,16 +1367,29 @@ fill(layer3);
 
     break;
   }
+/*
 
+  // How much of the top layer should be blended in the lower layer?
+  float blendOpacity = float( mouseX ) / float( width );
+  myShader.set( "blendAlpha", blendOpacity );
 
+  // Pass the index of the blend mode to the shader
+  myShader.set( "blendMode", BL_OVERLAY );
 
+  // Apply the specified shader to any geometry drawn from this point  
+  shader(myShader);
 
-
+  // Draw the output of the shader onto a rectangle that covers the whole viewport
+  rect(0, 0, width, height);
 
  
+  // Call resetShader() so that further geometry remains unaffected by the shader
+  resetShader();
+ */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 //layer4//
+ 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
   switch(layer4) {
@@ -1534,19 +1398,231 @@ fill(layer3);
 
     break;
   case 1:
+rectMode(CORNER);
+        fill(selectedColor.toARGB(),alphashape);    
+        if(!bw)fill(0);
 
-    noStroke();  
-    pushMatrix();
-    fill(0);
-    scale(2);
-    translate(400*-0.5, -150);
-    //rotate(frameCount/50);
-    triangle(400, 200, 200, 500, 600, 500);
-    popMatrix();
+ for (int x=startx; x<width; x+=2)
+      rect(0,20*x,width,10+bpm*0.1);
+ break;
+    
+      case 2:
+rectMode(CORNER);
+        fill(selectedColor.toARGB(),alphashape); 
+        if(!bw)fill(0);
+ for (int x=startx; x<height; x+=2)
+      rect(20*x,0,10+bpm*0.2,height);
+ break;
+    
+    case 3:
+    
+     pushMatrix();
+ translate((width*0.5),-(height)*2); 
+   rotate(radians(rotani));
+  translate(-(width*2),-(height*0.5)); 
+    translate((width*2),(height*0.5)); 
+  rectMode(CORNER);
+        fill(selectedColor.toARGB(),alphashape);    
+        if(!bw)fill(0);
+
+ for (int x=startx; x<width*2; x+=2){
+      rect(0,20*x,width*3,10+bpm*0.1);
+ }
+     popMatrix();
+ break;
+    
+      case 4:
+  
+     pushMatrix();
+ translate((width*0.5),-(height)*2); 
+   rotate(radians(-rotani));
+  translate(-(width*2),-(height*0.5)); 
+    translate((width*2),(height*0.5)); 
+  rectMode(CORNER);
+        fill(selectedColor.toARGB(),alphashape);    
+        if(!bw)fill(0);
+
+ for (int x=startx; x<width*2; x+=2){
+      rect(0,20*x,width*3,20+bpm*0.2);
+ }
+     popMatrix();
+ break;  
+    
+      case 5:
+       pushMatrix();
+ translate((width*0.5),-(height)*2); 
+   rotate(radians(rotani));
+  translate(-(width*2),-(height*0.5)); 
+    translate((width*2),(height*0.5)); 
+  rectMode(CORNER);
+        fill(selectedColor.toARGB(),alphashape);    
+        if(!bw)fill(0);
+
+ for (int x=startx; x<width*2; x+=5){
+      rect(0,20*x,width*3,20+bpm*0.2);
+ }
+     popMatrix(); 
+     
+     
+ break;     
+    
+    
+       case 6:
+       
+       
+         stroke(selectedColor.toARGB(),alphashape);    
+        if(!bw)stroke(0);
+       
+   
+ pushMatrix();
+translate((width*0.52),(height*0.5)); 
+ rotate(radians(rotani));
+   translate(-(width*0.5),-(height*0.5)); 
+    translate((width*0.5),(height*0.5)); 
+   noFill();
+     
+strokeWeight(60);
+ 
+ 
+arc(0, 0,260+bpm*0.2,  260 +bpm*0.2, HALF_PI, PI);
+arc(0, 0,370 +bpm*0.2, 370 +bpm*0.2, PI*0.5, PI+QUARTER_PI);
+arc(0, 0,480 +bpm*0.2, 480 +bpm*0.2, PI+QUARTER_PI, TWO_PI);  
+ 
+ 
+     popMatrix(); 
+     
+     
+ break;     
+       
+    
+
+    
+    case 7:
+       
+       
+         stroke(selectedColor.toARGB(),alphashape);    
+        if(!bw)stroke(0);
+       
+       noFill();
+ pushMatrix();
+translate((width*0.5),(height*0.5)); 
+ rotate(radians(rotani));
+   translate(-(width*0.5),-(height*0.5)); 
+    translate((width*0.5),(height*0.5)); 
+   noFill();
+     
+strokeWeight(10);
+ 
+ 
+ for (int x=startx; x<width; x+=10)
+ellipse(0,0,width*0.2+x*10,width*0.2+x*10);
+ 
+ 
+     popMatrix(); 
+     
+     
+ break;     
+           
+    
+    
+     case 8:
+       noStroke();
+         
+         fill(cl2,alphashape);    
+        if(!bw)fill(0);
+       
+   
+ 
+ 
+ for (int x=startx; x<20; x+=1)
+ for (int y=starty; y<20; y+=1)
+ellipse(50*x,50*y, 10*sizeshape, 10*sizeshape);
+ 
+ 
+   
+     
+ break;     
+        
+     case 9:
+       
+       
+         fill(selectedColor.toARGB(),alphashape);    
+        if(!bw)fill(0);
+       
+   
 
 
-    break;
-  case 2:
+   
+  
+ for (int x=startx; x<20; x+=1)
+ for (int y=starty; y<40; y+=1){ 
+ pushMatrix();
+ translate(50*x,(50*y)); 
+ rotate(radians(rotani));
+   translate(-(50*x),-(50*y)); 
+    translate((50*x),(50*y)); 
+rect(0,0, 10*sizeshape, 10*sizeshape);
+   popMatrix(); 
+ }
+    
+     
+ break;              
+       
+           
+           
+     case 10:
+       
+       
+         fill(selectedColor.toARGB(),alphashape);    
+        if(!bw)fill(0);
+       
+   
+
+
+   
+  
+ for (int x=startx; x<20; x+=1)
+ for (int y=starty; y<40; y+=1){ 
+ pushMatrix();
+ translate(50*x,(50*y)); 
+ rotate(radians(rotani));
+   translate(-(50*x),-(50*y)); 
+    translate((50*x),(50*y)); 
+rect(0,0, 40*sizeshape, 5*sizeshape);
+rect(0,0, 5*sizeshape, 40*sizeshape);
+   popMatrix(); 
+ }
+    
+     
+ break;              
+                  
+         
+           
+           
+       case 11:     
+           
+   strokeWeight(20);
+ // line(0, height/2, width, height/2);
+  stroke(selectedColor.toARGB(),alphashape);    
+        if(!bw)stroke(0);
+ 
+  xPos = 0;
+  yPos = height/2;
+  while (xPos < width) {
+    int xNextPos = xPos + round(random(10, 20));
+    int yNextPos = yPos + round(random(-50, 50));
+    yNextPos = constrain(yNextPos, 0, height/2);
+    line(xPos, yPos, xNextPos, yNextPos);
+    xPos = xNextPos;
+    yPos = yNextPos;
+  }        
+           
+           
+           
+     break;         
+           
+           
+  case 22:
   
      noStroke();  
     pushMatrix();
@@ -1568,25 +1644,99 @@ fill(layer3);
   
   
     break;
-  case 5: 
+  case 32: 
+   float speed = map(mouseX, 0, width, 0.01, 0.3);
+
+  // semi transparent rectangle  
+  rest.beginDraw();
+  rest.fill(0, 0);
+  rest.noStroke();
+  rest.rect(0, 0, width, height);
+ 
+  // calculate points
+  float angle = TWO_PI / steps;
+  for (int i =0; i< points.length; i++) {
+    float c = i*angle;
+    float offset=map(noise(xOff, yOff), 0, 0.8, -30, 30);
+    float radius=height/5+offset;
+    points[i].x = radius*cos(c);
+    points[i].y = 1.2*radius*sin(c);
+    xOff+=0.5;
+  }
+  xOff = 0;
+  yOff += speed;
+ 
+  // draw points 1
+  rest.translate(width/2, height/2);
+  rest.noFill();
+  rest.strokeWeight(random(60*sizeshape));
+  rest.stroke(255, 60, 220, 20);
+ 
+   rest.stroke( selectedColor.toARGB(), 20);
+ 
+
+  rest.beginShape();
+  rest.curveVertex(points[points.length-1].x, points[points.length-1].y);
+ 
+  for (int i =0; i< points.length; i+=2) {
+    rest.curveVertex(points[i].x, points[i].y);
+  }
+  rest.curveVertex(points[0].x, points[0].y);
+  rest.curveVertex(points[1].x, points[1].y);
+  rest.endShape();
+ 
+ 
+  // draw points 2
+  rest.noFill();
+  rest.strokeWeight(60*sizeshape);
+  rest.stroke(20, 220, 220, 20);
+  //rest.scale(frameCount%5);
+
+  rest.beginShape();
+  rest.curveVertex(points[points.length-1].x, points[points.length-1].y);
+ 
+  for (int i =0; i< points.length; i+=3) {
+    rest.curveVertex(points[i].x, points[i].y);
+  }
+  rest.curveVertex(points[0].x, points[0].y);
+  rest.curveVertex(points[1].x, points[1].y);
+  rest.endShape();
+  rest.endDraw();
+ 
+  image(rest, 0, 0);
+ 
+  translate(width/2, height/2);
+  // draw points 3
+  noFill();
+  strokeWeight(sizeshape*40);
+  stroke(0);
+ 
+  beginShape();
+  curveVertex(points[points.length-1].x, points[points.length-1].y);
+ 
+  for (int i =0; i< points.length; i+=1) {
+    curveVertex(points[i].x, points[i].y);
+  }
+  curveVertex(points[0].x, points[0].y);
+  curveVertex(points[1].x, points[1].y);
+  endShape();
+    break;
+  case 64: 
     ;
     break;
-  case 6: 
+  case 74: 
     ;
     break;
-  case 7: 
+  case 84: 
     ;
     break;
-  case 8: 
+  case 94: 
     ;
     break;
-  case 9: 
+  case 104: 
     ;
     break;
-  case 10: 
-    ;
-    break;
-  case 11: 
+  case 114: 
     ;
     break;
   case 12: 
@@ -1615,8 +1765,8 @@ Title[0].textFont(fontawesome);
 Title[0].fill(selectedColor.toARGB(),alphashape); 
 
 Title[0].pushMatrix();
-Title[0].scale(0.70);
-Title[0].text("Mr OIZO",10, 450);
+Title[0].scale(1);
+Title[0].text("Mr OIZO",100, 450);
 Title[0].popMatrix();
 Title[0].endDraw();
   
@@ -1659,10 +1809,69 @@ background(0,0,0);
 break;
 
 
+
+
+
+  case 3:
+
+Title[0].beginDraw();
+//Title[0].background(0.50);
+ // Title[i].stroke(255);
+//  Title[i].line(20, 20, mouseX, mouseY);
+Title[0].textFont(fontawesome);
+Title[0].fill(selectedColor.toARGB(),alphashape); 
+
+Title[0].pushMatrix();
+Title[0].scale(1);
+Title[0].text("NTO",100, 450);
+Title[0].popMatrix();
+Title[0].endDraw();
+  
+   image(Title[0],0,0);
+   // imgMasked.set(0,0,Title[0]);
+ // imgMasked.mask(pg); // issue here on the iPad and iMacBook
+ // image(imgMasked,0,0);
+  
+ // image(,0,0); 
+break;
+  case 4:
+  
+  
+/*
+ imgsketch.loadPixels();
+  for (int y = 0; y < height; y++) { 
+    for (int x = 0; x < width; x++) {
+      int px = get(x, y);
+imgsketch.pixels[x + y * width] = px;
+    }
+  }
+imgsketch.updatePixels();  
+  
+*/
+  
+Title[0].beginDraw();
+Title[0].background(0);
+Title[0].textFont(fontawesome);
+Title[0].fill(250); 
+Title[0].pushMatrix();
+Title[0].scale(0.70);
+Title[0].text("NTO",10, 450);
+Title[0].popMatrix();
+Title[0].endDraw();
+imgsketch= get();
+//filter(INVERT);
+imgsketch.mask(Title[0]); 
+background(0,0,0);
+ image(imgsketch,0,0);  
+break;
+
+
+
+
 }
 
 
-
+glitch();
 
 
   fill(20+py, 240, 100+ppy[1]);
@@ -1697,10 +1906,20 @@ break;
  }*/
 
 
+void glitch(){
+if(glitch1){
 
-void controlEvent(ControlEvent theEvent) {
+
+
+
+
 }
 
+
+
+
+
+}
 
 
 
@@ -1729,7 +1948,7 @@ sy=sy*sizeshape;
   switch(shape) {
 
   case 1: //"ellipse":
-  
+
     pushMatrix();
     //scale(2);
  // translate(400*-0.5, -100);
@@ -1746,10 +1965,8 @@ sy=sy*sizeshape;
  // translate(400*-0.5, -100);
  // rotate(frameCount/50);
  // translate(-(tx+50), -(ty+50));
-  translate((tx+50), (ty+50));
-   rotate(radians(rotani));
-  translate(-(tx+50),- (ty+50));
-    translate((tx+50), (ty+50));
+ 
+    
 //rotate( (frameCount/50)+radians(45));   
     rect(00,0, sx, sy);
     popMatrix();
@@ -1924,6 +2141,8 @@ if(shape2)  switch(shape) {
  // rotate(frameCount/50);
   translate((tx+50), (ty+50));
    rotate(radians(rotani));
+   
+   rotateZ(rotaniz);
   translate(-(tx+50),- (ty+50));
     translate((tx+50), (ty+50));
 //rotate( (frameCount/50)+radians(45));  
@@ -1992,11 +2211,12 @@ void keyPressed() {
     case('c'):
       /* connect to the broadcaster */
       m = new OscMessage("/server/connect",new Object[0]);
-      oscP5.flush(m,myBroadcastLocation);     println("eee");
+      oscP5.flush(m,myBroadcastLocation); 
+      //println("eee");
       break;
     case('d'):
       /* disconnect from the broadcaster */
-      println("ee");
+     // println("ee");
       m = new OscMessage("/server/disconnect",new Object[0]);
       oscP5.flush(m,myBroadcastLocation);  
       break;
@@ -2008,9 +2228,27 @@ void keyPressed() {
 /* incoming osc message are forwarded to the oscEvent method. */
 void oscEvent(OscMessage theOscMessage) {
   /* get and print the address pattern and the typetag of the received OscMessage */
-  println("### received an osc message with addrpattern "+theOscMessage.addrPattern()+" and typetag "+theOscMessage.typetag());
+ // println("### received an osc message with addrpattern "+theOscMessage.addrPattern()+" and typetag "+theOscMessage.typetag());
   theOscMessage.print();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

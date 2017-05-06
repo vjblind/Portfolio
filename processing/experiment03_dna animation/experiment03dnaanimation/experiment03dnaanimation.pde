@@ -35,8 +35,8 @@ stroke(250);
 
   
 pushStyle();
-font = loadFont("StarlinerBTN-48.vlw");
-textFont(font, 15);
+
+
 text("vjblind",100,450);
 popStyle();
 }void mouseClicked(){op++;}
