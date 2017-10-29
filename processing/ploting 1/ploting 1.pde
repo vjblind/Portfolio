@@ -1,4 +1,4 @@
- 
+/* simple learning practice about ploting math formula on the screen */ 
 
 int y=-111,w=1,h=1;float rayon=3,theta=4;
 void setup(){size(800,600);

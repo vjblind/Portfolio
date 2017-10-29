@@ -1,4 +1,4 @@
-
+/* deform image produced by the draw loop with "set"*/
 float i=0;
 void setup(){
 size (800,600);
