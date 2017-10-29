@@ -1,8 +1,15 @@
+import spout.*;
+
+// DECLARE A SPOUT OBJECT
+Spout spout;
+
 int num=100;
 Pa[] pa =new Pa[100000];PVector[] posm= new PVector[20];
 int res=100;
 void setup(){
-size (800,600);
+  // Initial window size
+  size(800,600, P3D);
+  textureMode(NORMAL);
 for(int x=0; x<16;x++)posm[x]=new PVector(random(800),random(600));
  
 int t=0 ; 
@@ -11,6 +18,15 @@ pa[t]=new Pa(10+x*10,10+y*10);
 pa[t].id=t; 
 }
 
+// CREATE A NEW SPOUT OBJECT
+  spout = new Spout(this);
+  
+  // CREATE A NAMED SENDER
+  // A sender can be created now with any name.
+  // Otherwise a sender is created the first time
+  // "sendTexture" is called and the sketch
+  // folder name is used.  
+  spout.createSender("Spout Processing");
 
 //for(int x=0 ; x< num;x++)pa[x].id=10; 
 }
@@ -24,7 +40,7 @@ for(int x=0; x<10;x++)posm[x].add(new PVector(random(-1,1),random(-1,1)));
 
 for(int x=0; x<10;x++)ellipse(posm[x].x,posm[x].y,2,2);
 
-
+    spout.sendTexture();
 }
 
 class Pa{

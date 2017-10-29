@@ -147,7 +147,7 @@ boolean reverser=false,stroke1=false,fill1=true,shape2=true,glitch1=false;
 
 int cl1 = color(0), cl2 = color(0);
 
-
+Flock flock;
 String strategycolor="COMPLEMENTARY";
 String range="BRIGHT";
 TColor col = ColorRange.DARK.getColor();
@@ -209,7 +209,12 @@ void setup() {
   //  pat.every(12, pat3.repeat(4));
     
      
-    
+     flock = new Flock();
+  // Add an initial set of boids into the system
+  for (int i = 0; i < 200; i++) {
+    Boid b = new Boid(width/2,height/2);
+    flock.addBoid(b);
+  }
     
   fontawesome =loadFont("Italic-Bricks-200.vlw");
   pff= createFont("data/fontawesome-webfont.ttf",20);
@@ -2186,7 +2191,8 @@ rotate( (rotani*frameCount/50));
       case 5://"Triangle":
     
       //shape(bot, tx,ty,sx,sy);           // Draw at coordinate (280, 40) at the default size
-     
+   flock.run();
+   
 
    break; 
  
